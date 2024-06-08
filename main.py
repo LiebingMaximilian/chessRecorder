@@ -1,3 +1,4 @@
+import os
 import traceback
 
 import torch
@@ -21,17 +22,24 @@ import chess.engine
 
 debug = True
 
+# this requres the path to your local stockfish exe
+Stockfish(r"C:\Users\miebi\stockfish\stockfish-windows-x86-64-avx2.exe")
 # initialize
 Logger.logInfo("Starting up")
 board = chess.Board()
 game = chess.pgn.Game()
 game.setup(board)
 cam = cv2.VideoCapture(0)
-stockfish = Stockfish(r"C:\Users\miebi\stockfish\stockfish-windows-x86-64-avx2.exe")
+
 ucimoveList = []
 evallist = []
-chessBoardModel = torch.hub.load(r"C:\Users\miebi\yolov5",'custom', r"C:\Users\miebi\yolov5\runs\train\chessboard\weights\best", source="local") #pain in the ass
-piecesBoardModel = torch.hub.load(r"C:\Users\miebi\yolov5",'custom', r"C:\Users\miebi\yolov5\runs\train\pieces\weights\best", source="local")
+__location__ = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__)))
+
+#piecesBoardModel = torch.hub.load(r"C:\Users\miebi\yolov5",'custom', r"C:\Users\miebi\yolov5\runs\train\pieces\weights\best", source="local")
+#chessBoardModel = torch.hub.load(r"C:\Users\miebi\yolov5",'custom', r"C:\Users\miebi\yolov5\runs\train\chessboard\weights\best", source="local") #pain in the ass
+
+chessBoardModel = torch.hub.load(__location__, 'custom', os.path.join(__location__, 'chessboardModel'), source="local")
+piecesBoardModel = torch.hub.load(__location__, 'custom', os.path.join(__location__, 'piecesModel'), source="local")
 piecesBoardModel.conf = 0.1
 chessboardMatrix = [
     [-1, -1, -1, -1, -1, -1, -1, -1],  # Black pieces
