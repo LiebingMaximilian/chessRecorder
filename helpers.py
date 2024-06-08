@@ -97,11 +97,11 @@ def getBoxFromIndices(x,y):
     return x1, y1, x2, y2
 
 
-def checkFieldForPiece(fieldBox, pieces_boxes):
+def checkFieldForPiece(fieldBox, pieces_boxes, neededOverlap):
     for box_piece in pieces_boxes:
         overlap = calculate_overlap(fieldBox, box_piece[0])
         overlap_percentage = overlap / 10000
-        if overlap_percentage > 0.3:
+        if overlap_percentage > neededOverlap:
             return True
     return False
 
@@ -201,8 +201,8 @@ def printResultFromDetection(boxes, df, shouldprint):
             print(f"Detected {class_name} with confidence {confidence:.2f} at [{xmin}, {ymin}, {xmax}, {ymax}]")
 
 
-def stockfish_evaluation(board, time_limit = 0.5):
-    engine = chess.engine.SimpleEngine.popen_uci(r"C:\Users\miebi\stockfish\stockfish-windows-x86-64-avx2.exe")
+def stockfish_evaluation(board,path, time_limit = 0.5):
+    engine = chess.engine.SimpleEngine.popen_uci(path)
     result = engine.analyse(board, chess.engine.Limit(time=time_limit))
     return result['score']
 
@@ -226,3 +226,14 @@ def find_diagonal_squares(coords):
 
     # If no diagonal pairs are found, return None
     return None
+
+
+def read_config(filename):
+    config = {}
+    with open(filename, 'r') as file:
+        for line in file:
+            line = line.strip()
+            if line and not line.startswith('#'):  # Ignore empty lines and comments
+                key, value = line.split('=', 1)
+                config[key.strip()] = value.strip()
+    return config

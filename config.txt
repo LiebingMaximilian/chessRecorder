@@ -1,3 +1,8 @@
 stockfish=
 imagedir=
 Debug=False
+
+aspectRatioMin=0.5
+aspectRatioMax=2
+confidence=0.1
+neededOverlap=0.3

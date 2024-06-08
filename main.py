@@ -1,6 +1,5 @@
 import os
 import traceback
-
 import torch
 import time
 import chess
@@ -20,12 +19,25 @@ import chess.pgn
 from torch.hub import *
 import chess.engine
 
-debug = True
 
-# this requres the path to your local stockfish exe
-Stockfish(r"C:\Users\miebi\stockfish\stockfish-windows-x86-64-avx2.exe")
-# initialize
 Logger.logInfo("Starting up")
+__location__ = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__)))
+
+#Read Config
+try:
+    config = read_config(os.path.join(__location__, 'config.txt'))
+    debug = config['Debug'] == 'True'
+    stockfish = config['stockfish']
+    confidence = float(config['confidence'])
+    aspectRatioMin = float(config['aspectRatioMin'])
+    aspectRatioMax = float(config['aspectRatioMax'])
+    neededOverlap = float(config['neededOverlap'])
+except Exception as e:
+    Logger.logError('Error reading config. Reason: '+traceback.format_exc())
+    exit()
+
+# initialize
+
 board = chess.Board()
 game = chess.pgn.Game()
 game.setup(board)
@@ -33,14 +45,11 @@ cam = cv2.VideoCapture(0)
 
 ucimoveList = []
 evallist = []
-__location__ = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__)))
 
-#piecesBoardModel = torch.hub.load(r"C:\Users\miebi\yolov5",'custom', r"C:\Users\miebi\yolov5\runs\train\pieces\weights\best", source="local")
-#chessBoardModel = torch.hub.load(r"C:\Users\miebi\yolov5",'custom', r"C:\Users\miebi\yolov5\runs\train\chessboard\weights\best", source="local") #pain in the ass
 
 chessBoardModel = torch.hub.load(__location__, 'custom', os.path.join(__location__, 'chessboardModel'), source="local")
 piecesBoardModel = torch.hub.load(__location__, 'custom', os.path.join(__location__, 'piecesModel'), source="local")
-piecesBoardModel.conf = 0.1
+piecesBoardModel.conf = confidence
 chessboardMatrix = [
     [-1, -1, -1, -1, -1, -1, -1, -1],  # Black pieces
     [-1, -1, -1, -1, -1, -1, -1, -1],  # Black pawns
@@ -64,15 +73,14 @@ def recordMove():
     try:
         # getImage
         result, image = cam.read()
-        #for testing just use this
-        result = True
-        #image = cv2.imread(fr"C:\Users\miebi\OneDrive\Bilder\friedLiver\{halfmovecount}.jpg")
-        image = cv2.imread(fr"C:\Users\miebi\OneDrive\Bilder\castlingBothSides\{halfmovecount}.png")
-        image = cv2.imread(fr"C:\Users\miebi\OneDrive\Bilder\castlingBothSides\{halfmovecount}.png")
+        if not config['imagedir'] == '':
+            result = True
+            image = cv2.imread(os.path.join(config['imagedir'], rf'{halfmovecount}.png'))
         if result:
             # Inference
             result = chessBoardModel(image)
-            print(result)
+            if debug:
+                logInfo('Chessboard recognized: ' + result)
 
             bbox = helpers.getBbox(result)
 
@@ -100,9 +108,8 @@ def recordMove():
             for box in boxes:
                 crop = helpers.cropImage(resized, box[0])
                 brightness = helpers.average_brightness(crop)
-                cv2.imwrite(r'C:\Users\miebi\Desktop\cropped.jpg', crop)
                 aspectRatio = (box[0][2] - box[0][0])/(box[0][3] - box[0][1])
-                if aspectRatio < 0.5 or aspectRatio > 2:
+                if aspectRatio < aspectRatioMin or aspectRatio > aspectRatioMax:
                     continue
                 if brightness < avgBrightness:
                     boxesBlack.append(box)
@@ -124,8 +131,8 @@ def recordMove():
             for i in range(8):
                 for t in range(8):
                     box = getBoxFromIndices(i , t)
-                    haswhitePiece = checkFieldForPiece(box, boxesWhite)
-                    hasblackPiece = checkFieldForPiece(box, boxesBlack)
+                    haswhitePiece = checkFieldForPiece(box, boxesWhite, neededOverlap)
+                    hasblackPiece = checkFieldForPiece(box, boxesBlack, neededOverlap)
                     if haswhitePiece:
                         chessPositionMatrix[t][i] = 1
                     elif hasblackPiece:
@@ -202,7 +209,7 @@ def recordMove():
             halfmovecount = halfmovecount + 1
             if board.is_checkmate():
                 end()
-            eval = stockfish_evaluation(board, 1)
+            eval = stockfish_evaluation(board, stockfish, 1)
             if eval.is_mate():
                 evallist.append(eval.white())
             else:
@@ -211,7 +218,7 @@ def recordMove():
             endTime = time.time()
             logInfo(f"Move processed in {endTime-startTime}")
         else:
-            raise Exception("could not read Camera image")
+            raise Exception("could not read Camera image and no imagedirectory was provided in config")
     except Exception as e:
         Logger.logError(traceback.format_exc())
 
