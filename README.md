@@ -10,5 +10,7 @@ Setup:
 
 
 Explanation of the other config params:
-  aspectRatioMin and aspectRationMax: is the minimal and maximal allowed ration of a detected box. Usually pieces should get detected quite "squarish", so this can potentially sort out false positives
-  confidence: is the minimal confidence the object detection needs to recognize a piece. leave this very low. If a piece is not detected you can try to lower this value
+
+  - aspectRatioMin and aspectRationMax: is the minimal and maximal allowed ration of a detected box. Usually pieces should get detected quite "squarish", so this can potentially sort out false positives
+  - confidence: is the minimal confidence the object detection needs to recognize a piece. leave this very low. If a piece is not detected you can try to lower this value
+  - neededOverlap: the overlapPercentage a piece needs to have with a square, to be standing on that square. lower this for very small pieces, make it higher for very big pieces. But in generall keep it very low
