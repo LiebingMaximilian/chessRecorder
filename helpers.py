@@ -4,7 +4,7 @@ import numpy as np
 from numpy.linalg import norm
 import chess
 import chess.pgn
-import chess.pgn
+import chess.engine
 def getpixelCoordinatesOfField(x,y):
     box = []
     x1 = int(x *11/8 *800)
@@ -101,7 +101,7 @@ def checkFieldForPiece(fieldBox, pieces_boxes):
     for box_piece in pieces_boxes:
         overlap = calculate_overlap(fieldBox, box_piece[0])
         overlap_percentage = overlap / 10000
-        if overlap_percentage > 0.35:
+        if overlap_percentage > 0.3:
             return True
     return False
 
@@ -199,3 +199,30 @@ def printResultFromDetection(boxes, df, shouldprint):
         boxes.append(((int(xmin), int(ymin), int(xmax), int(ymax)), confidence))
         if shouldprint:
             print(f"Detected {class_name} with confidence {confidence:.2f} at [{xmin}, {ymin}, {xmax}, {ymax}]")
+
+
+def stockfish_evaluation(board, time_limit = 0.5):
+    engine = chess.engine.SimpleEngine.popen_uci(r"C:\Users\miebi\stockfish\stockfish-windows-x86-64-avx2.exe")
+    result = engine.analyse(board, chess.engine.Limit(time=time_limit))
+    return result['score']
+
+def find_diagonal_squares(coords):
+    if len(coords) != 3:
+        return None  # Ensure there are exactly three coordinates
+
+    # Sort the coordinates to simplify comparison
+    coords = sorted(coords)
+
+    # Extract individual coordinates for clarity
+    (x1, y1), (x2, y2), (x3, y3) = coords
+
+    # Check for diagonal pairs
+    if (abs(x1 - x2) == 1 and abs(y1 - y2) == 1):
+        return (coords[0], coords[1])
+    elif (abs(x1 - x3) == 1 and abs(y1 - y3) == 1):
+        return (coords[0], coords[2])
+    elif (abs(x2 - x3) == 1 and abs(y2 - y3) == 1):
+        return (coords[1], coords[2])
+
+    # If no diagonal pairs are found, return None
+    return None
